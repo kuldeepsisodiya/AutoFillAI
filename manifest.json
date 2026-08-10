@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "AI Form Autofiller",
+  "version": "1.0",
+  "description": "Autofills forms dynamically (Name, Enrollment) and uses Gemini AI to solve questions on any webpage.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AI Form Autofiller"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
