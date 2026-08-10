@@ -36,14 +36,14 @@ An AI-powered Chrome extension that automatically reads quiz questions, multiple
 ## ⚙️ Configuration & Setup
 
 1. Click on the **AutoFillAI** extension icon in your Chrome toolbar.
-2. Go to the **AI Settings** tab:
-   - **API Base URL**: Pre-configured to `https://api.groq.com/openai/v1`.
-   - **API Key / Token**: Paste your Groq API Key (keys are stored securely in local storage, never hardcoded).
-   - **Custom Model Name**: Pre-configured to `llama-3.1-8b-instant`.
-3. Go to the **Profile** tab and enter your:
+2. Go to the **AI Settings** tab and select your preferred **Free API Provider**:
+   - **Custom API (e.g. Groq Free Tier)** (Default): Pre-configured to use Groq's high-speed endpoint (`https://api.groq.com/openai/v1`) with the `llama-3.1-8b-instant` model. Paste your Groq API Key to get started.
+   - **Local Ollama (Free & Offline)**: Connects to your local offline Ollama server (`http://localhost:11434/v1`). Works with custom local models (like `qwen3:4b` or `llama3`) completely offline with no internet needed!
+   - **Google Gemini API (Free Tier)**: Connects directly to Google's cloud API. Simply paste your free API key from Google AI Studio and select a model (like `gemini-2.5-flash`).
+3. Go to the **Profile** tab and enter your personal details if required by the form:
    - **Name** (e.g. `Kuldeep Sisodiya`)
    - **Enrollment Number** (e.g. `0863EC241030`)
-   - Any custom field you need.
+   - Any custom fields (e.g. Class, Section, Roll Number).
 4. (Optional) Custom Solver Instructions are pre-configured to act as an Electronics & Communication Engineering Professor for academic accuracy on ECE quizzes.
 
 ---
