@@ -68,6 +68,8 @@ body {
 .logo-icon {
   width: 28px;
   height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
   filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.4));
 }
 
