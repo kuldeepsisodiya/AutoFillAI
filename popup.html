@@ -67,12 +67,12 @@
 
       <!-- Tab 2: AI Settings -->
       <section class="tab-pane" id="tab-ai-settings">
-        <div class="form-group" style="display: none;">
+        <div class="form-group" id="container-api-provider">
           <label for="select-api-provider">API Provider</label>
           <select id="select-api-provider">
-            <option value="gemini">Google Gemini API</option>
+            <option value="custom" selected>Custom API (e.g. Groq Free Tier)</option>
             <option value="ollama">Local Ollama (Free & Offline)</option>
-            <option value="custom" selected>Custom OpenAI-Compatible API</option>
+            <option value="gemini">Google Gemini API (Free Tier)</option>
           </select>
         </div>
 
