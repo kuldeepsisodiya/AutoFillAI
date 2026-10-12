@@ -20,10 +20,10 @@ async function handleGeminiCall({ questions, model, instructions, profile }) {
   const apiKey = storage.api_key;
   const apiBaseUrl = storage.api_url || '';
 
-  // Custom/Ollama providers might not require an API key (e.g. local Ollama server)
-  const isCustomOrOllama = apiProvider === 'custom' || apiProvider === 'ollama';
-  if (!isCustomOrOllama && !apiKey) {
-    throw new Error('API Key is missing. Please set it in the extension popup settings.');
+  // Check API Key
+  const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral';
+  if ((apiProvider === 'gemini' || apiProvider === 'mistral') && !apiKey) {
+    throw new Error(`${apiProvider === 'mistral' ? 'Mistral' : 'Gemini'} API Key is missing. Please set it in the extension popup settings.`);
   }
 
   // Construct user profile context text if present
@@ -40,16 +40,21 @@ Here are the user's profile details. Use them if any question asks for their nam
     }
   }
 
-  const targetModel = isCustomOrOllama ? (storage.custom_model || model) : (model || 'gemini-2.5-flash');
+  let fallbackModel = 'gemini-2.5-flash';
+  if (apiProvider === 'mistral') fallbackModel = 'ministral-3b-2512';
+  else if (apiProvider === 'ollama') fallbackModel = 'qwen3:4b';
+  else if (apiProvider === 'custom') fallbackModel = 'llama-3.1-8b-instant';
 
-  // If using local Ollama or custom, process in batches to prevent memory/token crashes
-  if (isCustomOrOllama) {
+  const targetModel = isOpenAICompatible ? (storage.custom_model || fallbackModel) : (model || fallbackModel);
+
+  // If using Mistral, Ollama, or custom, process in batches to prevent memory/token crashes
+  if (isOpenAICompatible) {
     const batchSize = 5;
     const allAnswers = [];
     
     for (let i = 0; i < questions.length; i += batchSize) {
       const batch = questions.slice(i, i + batchSize);
-      console.log(`AutoFillAI: Solving local batch ${Math.floor(i/batchSize) + 1} (${batch.length} questions)`);
+      console.log(`AutoFillAI: Solving batch ${Math.floor(i/batchSize) + 1} (${batch.length} questions) with ${apiProvider}`);
       const result = await executeApiRequest({
         questions: batch,
         targetModel,
@@ -108,14 +113,18 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
     'Content-Type': 'application/json'
   };
 
-  const isCustomOrOllama = apiProvider === 'custom' || apiProvider === 'ollama';
+  const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral';
 
-  if (isCustomOrOllama) {
-    if (!apiBaseUrl) {
-      throw new Error('Custom API Base URL is missing. Please set it in the extension settings.');
+  if (isOpenAICompatible) {
+    let endpointBase = apiBaseUrl;
+    if (apiProvider === 'mistral' && !endpointBase) {
+      endpointBase = 'https://api.mistral.ai/v1';
+    }
+    if (!endpointBase) {
+      throw new Error('API Base URL is missing. Please set it in the extension settings.');
     }
     
-    url = `${apiBaseUrl.replace(/\/$/, '')}/chat/completions`;
+    url = `${endpointBase.replace(/\/$/, '')}/chat/completions`;
     
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
@@ -205,10 +214,10 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
   
   try {
     let responseText = '';
-    if (isCustomOrOllama) {
+    if (isOpenAICompatible) {
       responseText = result.choices?.[0]?.message?.content;
       if (!responseText) {
-        throw new Error('Custom API returned an empty response.');
+        throw new Error(`${apiProvider === 'mistral' ? 'Mistral' : 'Custom'} API returned an empty response.`);
       }
     } else {
       const candidate = result.candidates?.[0];

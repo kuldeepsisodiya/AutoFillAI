@@ -1,6 +1,6 @@
 # AutoFillAI
 
-An AI-powered Chrome extension that automatically reads quiz questions, multiple-choice options, and text fields on the current page, solves them using advanced AI (like Groq Llama-3.1), and automatically fills in the answers on-screen with a smooth sequential animation.
+An AI-powered Chrome extension that automatically reads quiz questions, multiple-choice options, and text fields on the current page, solves them using advanced AI (like Mistral, Groq Llama-3.1, or Gemini), and automatically fills in the answers on-screen with a smooth sequential animation.
 
 *Developed with ❤️ by **Kuldeep Sisoodiya***
 
@@ -10,7 +10,7 @@ An AI-powered Chrome extension that automatically reads quiz questions, multiple
 
 - **Context-Aware AI Solver**: Submits all page questions together in a single API call so the AI has the full context of the quiz (great for technical topics like cellular communication, signals, etc.), maximizing solving accuracy.
 - **Visual Fill Animation**: Once solved, answers are filled on the screen one-by-one with a smooth `200ms` delay, giving clean, visual confirmation.
-- **Dedicated Groq / OpenAI Integration**: Pre-configured to use Groq's high-speed `llama-3.1-8b-instant` model for near-instant responses.
+- **Flexible Multi-Provider AI Support**: Built-in presets for **Mistral AI** (`ministral-3b-2512`), **Groq** (`llama-3.1-8b-instant`), **Google Gemini** (`gemini-2.5-flash`), offline **Local Ollama** models, and any custom OpenAI-compatible endpoint.
 - **Personal Profile Autofill**: Automatically fills in personal details (Name, Enrollment/Roll Number, and custom fields) when requested by form inputs.
 - **Clean Settings Interface**: Tidy settings view showing only the custom API endpoint configuration, model name, and prompt instructions.
 - **Robust Schema Parsing**: Handles both JSON objects and JSON array outputs directly from the model, making parsing bulletproof.
@@ -37,6 +37,7 @@ An AI-powered Chrome extension that automatically reads quiz questions, multiple
 
 1. Click on the **AutoFillAI** extension icon in your Chrome toolbar.
 2. Go to the **AI Settings** tab and select your preferred **Free API Provider**:
+   - **Mistral AI (Free Tier)**: Connects to Mistral's API endpoint (`https://api.mistral.ai/v1`) using efficient models like `ministral-3b-2512` or `mistral-small-latest`. Get a free API key from [console.mistral.ai](https://console.mistral.ai/).
    - **Custom API (e.g. Groq Free Tier)** (Default): Pre-configured to use Groq's high-speed endpoint (`https://api.groq.com/openai/v1`) with the `llama-3.1-8b-instant` model. Paste your Groq API Key to get started.
    - **Local Ollama (Free & Offline)**: Connects to your local offline Ollama server (`http://localhost:11434/v1`). Works with custom local models (like `qwen3:4b` or `llama3`) completely offline with no internet needed!
    - **Google Gemini API (Free Tier)**: Connects directly to Google's cloud API. Simply paste your free API key from Google AI Studio and select a model (like `gemini-2.5-flash`).
