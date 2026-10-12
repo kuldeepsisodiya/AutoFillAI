@@ -95,10 +95,22 @@ async function loadSettings() {
     inputName.value = settings.name || '';
     inputEnrollment.value = settings.enrollment || '';
     inputApiKey.value = settings.api_key || '';
+    const provider = settings.api_provider || 'custom';
+    selectApiProvider.value = provider;
+
+    let defaultApiUrl = 'https://api.groq.com/openai/v1';
+    let defaultModel = 'llama-3.1-8b-instant';
+    if (provider === 'mistral') {
+      defaultApiUrl = 'https://api.mistral.ai/v1';
+      defaultModel = 'ministral-3b-2512';
+    } else if (provider === 'ollama') {
+      defaultApiUrl = 'http://localhost:11434/v1';
+      defaultModel = 'qwen3:4b';
+    }
+
+    inputApiUrl.value = settings.api_url || defaultApiUrl;
+    inputModel.value = settings.custom_model || defaultModel;
     selectModel.value = settings.model || 'gemini-2.5-flash';
-    inputModel.value = settings.custom_model || 'llama-3.1-8b-instant';
-    inputApiUrl.value = settings.api_url || 'https://api.groq.com/openai/v1';
-    selectApiProvider.value = settings.api_provider || 'custom';
     inputInstructions.value = settings.instructions || `You are an expert professor in Electronics and Communication Engineering.
 Analyze and solve each quiz question based on standard B.Tech ECE curriculum concepts (e.g. mobile networks, cellular communication, signals & systems, embedded systems, microprocessors). 
 Be highly accurate, select the most academically correct option, and write precise, correct text answers.`;
@@ -116,11 +128,31 @@ Be highly accurate, select the most academically correct option, and write preci
   }
 }
 
-// Toggle UI display depending on Provider (Gemini vs Ollama vs Custom)
+// Toggle UI display depending on Provider (Mistral vs Gemini vs Ollama vs Custom)
 function updateApiProviderUI(provider) {
   const apiKeyGroup = labelApiKey.closest('.form-group');
   
-  if (provider === 'ollama') {
+  if (provider === 'mistral') {
+    containerApiUrl.style.display = 'block';
+    containerInputModel.style.display = 'block';
+    containerSelectModel.style.display = 'none';
+    
+    if (apiKeyGroup) apiKeyGroup.style.display = 'flex';
+    labelApiKey.textContent = 'Mistral API Key';
+    hintApiKey.textContent = 'Get a free API key from console.mistral.ai';
+    inputApiKey.placeholder = 'Enter your Mistral API key';
+    
+    // Prefill Mistral endpoint & model if switching from another provider's defaults
+    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1')) {
+      inputApiUrl.value = 'https://api.mistral.ai/v1';
+    }
+    if (!inputModel.value.trim() || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3') {
+      inputModel.value = 'ministral-3b-2512';
+    }
+    
+    containerApiUrl.querySelector('.field-hint').textContent = 'Mistral base endpoint URL (https://api.mistral.ai/v1)';
+    containerInputModel.querySelector('.field-hint').textContent = 'Specify Mistral model ID (e.g. ministral-3b-2512, mistral-small-latest)';
+  } else if (provider === 'ollama') {
     containerApiUrl.style.display = 'block';
     containerInputModel.style.display = 'block';
     containerSelectModel.style.display = 'none';
@@ -129,10 +161,10 @@ function updateApiProviderUI(provider) {
     if (apiKeyGroup) apiKeyGroup.style.display = 'none';
     
     // Prefill default Ollama details if empty
-    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('api.openai.com')) {
+    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('api.openai.com') || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('mistral.ai')) {
       inputApiUrl.value = 'http://localhost:11434/v1';
     }
-    if (!inputModel.value.trim() || inputModel.value.includes('gemini') || inputModel.value.includes('llama-3-8b') || inputModel.value === 'llama3') {
+    if (!inputModel.value.trim() || inputModel.value.includes('gemini') || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'ministral-3b-2512') {
       inputModel.value = 'qwen3:4b';
     }
     
@@ -148,11 +180,11 @@ function updateApiProviderUI(provider) {
     hintApiKey.textContent = 'Enter the authorization token (if required by custom host)';
     inputApiKey.placeholder = 'Enter API key';
     
-    // Prefill default Custom/Groq details if empty or set to local Ollama
-    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1')) {
+    // Prefill default Custom/Groq details if empty or set to local Ollama / Mistral
+    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1') || inputApiUrl.value.includes('mistral.ai')) {
       inputApiUrl.value = 'https://api.groq.com/openai/v1';
     }
-    if (!inputModel.value.trim() || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3') {
+    if (!inputModel.value.trim() || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3' || inputModel.value === 'ministral-3b-2512') {
       inputModel.value = 'llama-3.1-8b-instant';
     }
     
@@ -258,13 +290,13 @@ async function handleFillProfile() {
 }
 
 async function handleSolveQuestions() {
-  // Check if API Key is configured for Gemini (or check credentials)
+  // Check if API Key is configured for Gemini or Mistral
   const settings = await chrome.storage.local.get(['api_key', 'api_provider', 'api_url']);
+  const provider = settings.api_provider || 'custom';
   
-  const isCustomOrOllama = settings.api_provider === 'custom' || settings.api_provider === 'ollama';
-  if (!isCustomOrOllama && !settings.api_key) {
+  if ((provider === 'gemini' || provider === 'mistral') && !settings.api_key) {
     showStatus('API Key Required', 'error');
-    updateFooterMessage('Please enter your Gemini API Key in the Settings tab.');
+    updateFooterMessage(`Please enter your ${provider === 'mistral' ? 'Mistral' : 'Gemini'} API Key in AI Settings.`);
     // Switch to Settings tab
     const settingsTabBtn = document.querySelector('.tab-btn[data-tab="ai-settings"]');
     if (settingsTabBtn) settingsTabBtn.click();
