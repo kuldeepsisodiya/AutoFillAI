@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AutoFillAI",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Autofills forms dynamically (Name, Enrollment) and uses AI to solve questions on any webpage.",
   "permissions": [
     "storage",
@@ -11,18 +11,24 @@
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
+    "https://api.mistral.ai/*",
+    "https://api.groq.com/*",
     "http://*/*",
     "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "AutoFillAI",
-    "default_icon": "icon.png"
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "icons": {
-    "16": "icon.png",
-    "48": "icon.png",
-    "128": "icon.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "background": {
     "service_worker": "background.js"

@@ -25,100 +25,25 @@
 
     <!-- Navigation Tabs -->
     <nav class="tab-navigation">
-      <button class="tab-btn active" data-tab="profile">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        Profile
+      <button class="tab-btn active" data-tab="actions">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Actions
       </button>
       <button class="tab-btn" data-tab="ai-settings">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
         AI Settings
       </button>
-      <button class="tab-btn" data-tab="actions">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        Actions
+      <button class="tab-btn" data-tab="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        Profile
       </button>
     </nav>
 
     <!-- Tab Contents -->
     <main class="tab-content-container">
       
-      <!-- Tab 1: Profile -->
-      <section class="tab-pane active" id="tab-profile">
-        <div class="form-group">
-          <label for="input-name">Full Name</label>
-          <input type="text" id="input-name" placeholder="John Doe" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label for="input-enrollment">Enrollment / Roll Number</label>
-          <input type="text" id="input-enrollment" placeholder="ENR12345678" autocomplete="off">
-        </div>
-        
-        <div class="divider-text"><span>Custom Profile Fields</span></div>
-        
-        <div class="custom-fields-container" id="custom-fields-list">
-          <!-- Dynamic custom fields injected here -->
-        </div>
-
-        <button class="btn btn-secondary btn-full" id="btn-add-field">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          Add Custom Field
-        </button>
-      </section>
-
-      <!-- Tab 2: AI Settings -->
-      <section class="tab-pane" id="tab-ai-settings">
-        <div class="form-group" id="container-api-provider">
-          <label for="select-api-provider">API Provider</label>
-          <select id="select-api-provider">
-            <option value="custom" selected>Custom API (e.g. Groq Free Tier)</option>
-            <option value="mistral">Mistral AI (Free Tier)</option>
-            <option value="ollama">Local Ollama (Free & Offline)</option>
-            <option value="gemini">Google Gemini API (Free Tier)</option>
-          </select>
-        </div>
-
-        <div class="form-group" id="container-api-url" style="display: block;">
-          <label for="input-api-url">API Base URL</label>
-          <input type="text" id="input-api-url" placeholder="https://api.groq.com/openai/v1" value="https://api.groq.com/openai/v1" autocomplete="off">
-          <span class="field-hint">The base endpoint URL (e.g. https://api.groq.com/openai/v1)</span>
-        </div>
-
-        <div class="form-group" id="group-api-key" style="display: block;">
-          <label for="input-api-key" id="label-api-key">API Key / Token</label>
-          <div class="api-key-input-wrapper">
-            <input type="password" id="input-api-key" placeholder="Enter API key" autocomplete="off">
-            <button class="toggle-password-btn" id="btn-toggle-password" type="button">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            </button>
-          </div>
-          <span class="field-hint" id="hint-api-key">Enter the authorization token (if required by custom host)</span>
-        </div>
-
-        <div class="form-group" id="container-select-model" style="display: none;">
-          <label for="select-model">AI Model</label>
-          <select id="select-model">
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast, General Purpose)</option>
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Complex Reasoning)</option>
-            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
-          </select>
-        </div>
-
-        <div class="form-group" id="container-input-model" style="display: block;">
-          <label for="input-model">Custom Model Name</label>
-          <input type="text" id="input-model" placeholder="e.g. llama-3.1-8b-instant" value="llama-3.1-8b-instant" autocomplete="off">
-          <span class="field-hint">Specify the exact model ID for the custom provider</span>
-        </div>
-
-        <div class="form-group">
-          <label for="input-instructions">Custom Solver Instructions (Optional)</label>
-          <textarea id="input-instructions" rows="6" placeholder="e.g. Always answer concisely.">You are an expert professor in Electronics and Communication Engineering.
-Analyze and solve each quiz question based on standard B.Tech ECE curriculum concepts (e.g. mobile networks, cellular communication, signals & systems, embedded systems, microprocessors). 
-Be highly accurate, select the most academically correct option, and write precise, correct text answers.</textarea>
-        </div>
-      </section>
-
-      <!-- Tab 3: Actions -->
-      <section class="tab-pane" id="tab-actions">
+      <!-- Tab 1: Actions -->
+      <section class="tab-pane active" id="tab-actions">
         <div class="action-card">
           <h3>Fill Personal Info</h3>
           <p>Quickly fill in your Name, Enrollment Number, and custom fields on the current page.</p>
@@ -149,6 +74,90 @@ Be highly accurate, select the most academically correct option, and write preci
             </button>
           </div>
         </div>
+      </section>
+
+      <!-- Tab 2: AI Settings -->
+      <section class="tab-pane" id="tab-ai-settings">
+        <div class="form-group" id="container-api-provider">
+          <label for="select-api-provider">API Provider</label>
+          <select id="select-api-provider">
+            <option value="mistral" selected>Mistral AI (Free Tier)</option>
+            <option value="custom">Custom API (e.g. Groq Free Tier)</option>
+            <option value="ollama">Local Ollama (Free & Offline)</option>
+            <option value="gemini">Google Gemini API (Free Tier)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="container-api-url" style="display: block;">
+          <label for="input-api-url">API Base URL</label>
+          <input type="text" id="input-api-url" placeholder="https://api.mistral.ai/v1" value="https://api.mistral.ai/v1" autocomplete="off">
+          <span class="field-hint">Mistral base endpoint URL (https://api.mistral.ai/v1)</span>
+        </div>
+
+        <div class="form-group" id="group-api-key" style="display: block;">
+          <div class="api-key-header-row">
+            <label for="input-api-key" id="label-api-key">Mistral API Key</label>
+            <span class="keys-count-badge" id="badge-keys-count" style="display: none;">0 keys</span>
+          </div>
+          <div class="api-key-input-wrapper">
+            <textarea id="input-api-key" rows="2" placeholder="Enter API key(s)&#10;Add multiple keys (one per line) for auto-switching on token limits" autocomplete="off"></textarea>
+            <button class="toggle-password-btn" id="btn-toggle-password" type="button" title="Toggle key visibility">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+          <div class="api-key-help-row">
+            <a href="https://console.mistral.ai/api-keys/" id="link-get-api-key" class="get-api-link" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>Get Free Mistral API Key</span>
+            </a>
+            <span class="field-hint" id="hint-api-key">Add multiple keys (1 per line) to auto-switch on rate limits</span>
+          </div>
+        </div>
+
+        <div class="form-group" id="container-select-model" style="display: none;">
+          <label for="select-model">AI Model</label>
+          <select id="select-model">
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast, General Purpose)</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Complex Reasoning)</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="container-input-model" style="display: block;">
+          <label for="input-model">Mistral Model Name</label>
+          <input type="text" id="input-model" placeholder="e.g. ministral-3b-2512" value="ministral-3b-2512" autocomplete="off">
+          <span class="field-hint">Specify Mistral model ID (e.g. ministral-3b-2512, mistral-small-latest)</span>
+        </div>
+
+        <div class="form-group">
+          <label for="input-instructions">Custom Solver Instructions (Optional)</label>
+          <textarea id="input-instructions" rows="6" placeholder="e.g. Always answer concisely.">You are an expert professor in Electronics and Communication Engineering.
+Analyze and solve each quiz question based on standard B.Tech ECE curriculum concepts (e.g. mobile networks, cellular communication, signals & systems, embedded systems, microprocessors). 
+Be highly accurate, select the most academically correct option, and write precise, correct text answers.</textarea>
+        </div>
+      </section>
+
+      <!-- Tab 3: Profile -->
+      <section class="tab-pane" id="tab-profile">
+        <div class="form-group">
+          <label for="input-name">Full Name</label>
+          <input type="text" id="input-name" placeholder="John Doe" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="input-enrollment">Enrollment / Roll Number</label>
+          <input type="text" id="input-enrollment" placeholder="ENR12345678" autocomplete="off">
+        </div>
+        
+        <div class="divider-text"><span>Custom Profile Fields</span></div>
+        
+        <div class="custom-fields-container" id="custom-fields-list">
+          <!-- Dynamic custom fields injected here -->
+        </div>
+
+        <button class="btn btn-secondary btn-full" id="btn-add-field">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Add Custom Field
+        </button>
       </section>
 
     </main>

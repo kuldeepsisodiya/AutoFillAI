@@ -12,19 +12,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Utility: Parse multi-line or comma-separated API keys
+function parseApiKeys(keyInput) {
+  if (!keyInput) return [];
+  if (Array.isArray(keyInput)) {
+    return keyInput.map(k => String(k).trim()).filter(k => k.length > 0);
+  }
+  return String(keyInput)
+    .split(/[\r\n,;]+/)
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+}
+
+// Utility: Check if an error represents quota exhausted, rate limit, or token limit
+function isRateLimitOrQuotaError(error) {
+  if (!error) return false;
+  if (error.status === 429 || error.status === 402 || error.status === 403) return true;
+  
+  const msg = (error.message || '').toLowerCase();
+  return (
+    msg.includes('429') ||
+    msg.includes('rate limit') ||
+    msg.includes('quota') ||
+    msg.includes('exhausted') ||
+    msg.includes('capacity') ||
+    msg.includes('too many requests') ||
+    msg.includes('tokens per minute') ||
+    msg.includes('tokens per day') ||
+    msg.includes('requests per day') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('tpm') ||
+    msg.includes('rpm') ||
+    msg.includes('rpd') ||
+    msg.includes('credit') ||
+    msg.includes('billing')
+  );
+}
+
 // Handle the API interaction (supports Gemini & Custom OpenAI-compatible endpoints)
 async function handleGeminiCall({ questions, model, instructions, profile }) {
   // Retrieve settings
-  const storage = await chrome.storage.local.get(['api_key', 'api_provider', 'api_url', 'custom_model']);
-  const apiProvider = storage.api_provider || 'gemini';
-  const apiKey = storage.api_key;
-  const apiBaseUrl = storage.api_url || '';
+  const storage = await chrome.storage.local.get([
+    'api_key', 'api_provider', 'api_url', 'custom_model', 'active_key_index'
+  ]);
+  const apiProvider = storage.api_provider || 'mistral';
+  const apiKeys = parseApiKeys(storage.api_key);
+  const apiBaseUrl = storage.api_url || (apiProvider === 'mistral' ? 'https://api.mistral.ai/v1' : '');
 
   // Check API Key
   const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral';
-  if ((apiProvider === 'gemini' || apiProvider === 'mistral') && !apiKey) {
+  if ((apiProvider === 'gemini' || apiProvider === 'mistral') && apiKeys.length === 0) {
     throw new Error(`${apiProvider === 'mistral' ? 'Mistral' : 'Gemini'} API Key is missing. Please set it in the extension popup settings.`);
   }
+
+  // Key pool for rotation (for Ollama, a blank key is sufficient)
+  const keyPool = apiKeys.length > 0 ? apiKeys : [''];
+  let currentKeyIndex = (storage.active_key_index || 0) % keyPool.length;
 
   // Construct user profile context text if present
   let profileText = '';
@@ -40,12 +83,57 @@ Here are the user's profile details. Use them if any question asks for their nam
     }
   }
 
-  let fallbackModel = 'gemini-2.5-flash';
+  let fallbackModel = 'ministral-3b-2512';
   if (apiProvider === 'mistral') fallbackModel = 'ministral-3b-2512';
+  else if (apiProvider === 'gemini') fallbackModel = 'gemini-2.5-flash';
   else if (apiProvider === 'ollama') fallbackModel = 'qwen3:4b';
   else if (apiProvider === 'custom') fallbackModel = 'llama-3.1-8b-instant';
 
   const targetModel = isOpenAICompatible ? (storage.custom_model || fallbackModel) : (model || fallbackModel);
+
+  // Helper to execute request with automatic key rotation on token / rate limit exhaustion
+  async function runWithKeyFailover(requestCallback) {
+    let attempts = 0;
+    const maxAttempts = keyPool.length;
+    let lastError = null;
+
+    while (attempts < maxAttempts) {
+      const activeKey = keyPool[currentKeyIndex];
+      try {
+        return await requestCallback(activeKey);
+      } catch (err) {
+        lastError = err;
+        
+        // If we hit token limits or rate limits and have alternative keys available
+        if (isRateLimitOrQuotaError(err) && keyPool.length > 1) {
+          const oldIndex = currentKeyIndex;
+          currentKeyIndex = (currentKeyIndex + 1) % keyPool.length;
+          const nextKeyNum = currentKeyIndex + 1;
+          
+          console.warn(`AutoFillAI: Key #${oldIndex + 1} hit quota/rate limit (${err.message}). Auto-switching to Key #${nextKeyNum}...`);
+
+          // Persist working key index so future requests immediately use this key
+          chrome.storage.local.set({ active_key_index: currentKeyIndex }).catch(() => {});
+
+          // Notify extension popup and content script in real-time
+          chrome.runtime.sendMessage({
+            action: 'solve_progress',
+            statusText: `Switched to Key #${nextKeyNum}`,
+            detailText: `Key #${oldIndex + 1} quota reached. Auto-switched to backup Key #${nextKeyNum}...`,
+            activeKeyIndex: currentKeyIndex
+          }).catch(() => {});
+
+          attempts++;
+          continue;
+        }
+
+        // If not a rate limit error or no additional keys, re-throw immediately
+        throw err;
+      }
+    }
+
+    throw new Error(`All ${keyPool.length} configured API keys exceeded rate/quota limits: ${lastError?.message || 'Quota exhausted'}`);
+  }
 
   // If using Mistral, Ollama, or custom, process in batches to prevent memory/token crashes
   if (isOpenAICompatible) {
@@ -55,31 +143,33 @@ Here are the user's profile details. Use them if any question asks for their nam
     for (let i = 0; i < questions.length; i += batchSize) {
       const batch = questions.slice(i, i + batchSize);
       console.log(`AutoFillAI: Solving batch ${Math.floor(i/batchSize) + 1} (${batch.length} questions) with ${apiProvider}`);
-      const result = await executeApiRequest({
+      
+      const result = await runWithKeyFailover(activeKey => executeApiRequest({
         questions: batch,
         targetModel,
         apiProvider,
-        apiKey,
+        apiKey: activeKey,
         apiBaseUrl,
         profileText,
         instructions
-      });
+      }));
+
       if (result && result.answers) {
         allAnswers.push(...result.answers);
       }
     }
     return { success: true, answers: allAnswers };
   } else {
-    // Single request for Gemini (cloud)
-    return await executeApiRequest({
+    // Single request for Gemini (cloud) with key failover
+    return await runWithKeyFailover(activeKey => executeApiRequest({
       questions,
       targetModel,
       apiProvider,
-      apiKey,
+      apiKey: activeKey,
       apiBaseUrl,
       profileText,
       instructions
-    });
+    }));
   }
 }
 
@@ -207,7 +297,9 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
       const errorData = JSON.parse(errorText);
       apiError = errorData.error?.message || errorData.message || apiError;
     } catch (e) {}
-    throw new Error(`API Error: ${apiError}`);
+    const err = new Error(`API Error (${response.status}): ${apiError}`);
+    err.status = response.status;
+    throw err;
   }
 
   const result = await response.json();

@@ -17,6 +17,8 @@ const labelApiKey = document.getElementById('label-api-key');
 const hintApiKey = document.getElementById('hint-api-key');
 const inputApiKey = document.getElementById('input-api-key');
 const btnTogglePassword = document.getElementById('btn-toggle-password');
+const badgeKeysCount = document.getElementById('badge-keys-count');
+const linkGetApiKey = document.getElementById('link-get-api-key');
 const containerSelectModel = document.getElementById('container-select-model');
 const selectModel = document.getElementById('select-model');
 const containerInputModel = document.getElementById('container-input-model');
@@ -30,6 +32,36 @@ const btnResetSettings = document.getElementById('btn-reset-settings');
 
 // State Variables
 let customFields = [];
+let isPasswordMasked = true;
+
+// Utility: Parse multi-line or comma-separated API keys
+function parseApiKeys(keyString) {
+  if (!keyString) return [];
+  return keyString
+    .split(/[\r\n,;]+/)
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+}
+
+// Update the keys count badge in the UI
+function updateKeysBadge(activeKeyIndex = 0) {
+  if (!badgeKeysCount) return;
+  const keys = parseApiKeys(inputApiKey.value);
+  if (keys.length === 0) {
+    badgeKeysCount.style.display = 'none';
+  } else if (keys.length === 1) {
+    badgeKeysCount.style.display = 'inline-flex';
+    badgeKeysCount.className = 'keys-count-badge single';
+    badgeKeysCount.textContent = '1 key active';
+    badgeKeysCount.removeAttribute('title');
+  } else {
+    badgeKeysCount.style.display = 'inline-flex';
+    badgeKeysCount.className = 'keys-count-badge multiple';
+    const currentActiveNum = (activeKeyIndex % keys.length) + 1;
+    badgeKeysCount.textContent = `⚡ ${keys.length} keys (Key #${currentActiveNum} active)`;
+    badgeKeysCount.title = 'Automatic failover enabled: rotates to next key if quota or rate limit is hit';
+  }
+}
 
 // Initialize Extension Popup
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,12 +78,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // 2. Password Toggle for API Key
+  // 2. Password Toggle for API Key Textarea
   btnTogglePassword.addEventListener('click', () => {
-    const isPassword = inputApiKey.type === 'password';
-    inputApiKey.type = isPassword ? 'text' : 'password';
-    btnTogglePassword.querySelector('svg').style.color = isPassword ? 'var(--accent-cyan)' : 'var(--text-muted)';
+    isPasswordMasked = !isPasswordMasked;
+    inputApiKey.style.webkitTextSecurity = isPasswordMasked ? 'disc' : 'none';
+    btnTogglePassword.querySelector('svg').style.color = isPasswordMasked ? 'var(--text-muted)' : 'var(--accent-cyan)';
+    btnTogglePassword.setAttribute('title', isPasswordMasked ? 'Show API keys' : 'Hide API keys');
   });
+
+  // 2b. Tappable link to get API Key (opens new tab in Edge/Chrome)
+  if (linkGetApiKey) {
+    linkGetApiKey.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = linkGetApiKey.href;
+      if (chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url });
+      } else {
+        window.open(url, '_blank');
+      }
+    });
+  }
 
   // 3. API Provider Change Logic
   selectApiProvider.addEventListener('change', () => {
@@ -66,6 +112,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   [inputName, inputEnrollment].forEach(input => {
     input.addEventListener('input', debounce(() => saveProfile(), 500));
   });
+
+  inputApiKey.addEventListener('input', () => updateKeysBadge());
 
   [inputApiKey, selectModel, inputModel, inputApiUrl, inputInstructions].forEach(input => {
     input.addEventListener('input', debounce(() => saveAISettings(), 500));
@@ -89,20 +137,22 @@ async function loadSettings() {
   try {
     const settings = await chrome.storage.local.get([
       'name', 'enrollment', 'api_key', 'model', 'instructions', 'custom_fields',
-      'api_provider', 'api_url', 'custom_model'
+      'api_provider', 'api_url', 'custom_model', 'active_key_index'
     ]);
 
     inputName.value = settings.name || '';
     inputEnrollment.value = settings.enrollment || '';
     inputApiKey.value = settings.api_key || '';
-    const provider = settings.api_provider || 'custom';
+    updateKeysBadge(settings.active_key_index || 0);
+
+    const provider = settings.api_provider || 'mistral';
     selectApiProvider.value = provider;
 
-    let defaultApiUrl = 'https://api.groq.com/openai/v1';
-    let defaultModel = 'llama-3.1-8b-instant';
-    if (provider === 'mistral') {
-      defaultApiUrl = 'https://api.mistral.ai/v1';
-      defaultModel = 'ministral-3b-2512';
+    let defaultApiUrl = 'https://api.mistral.ai/v1';
+    let defaultModel = 'ministral-3b-2512';
+    if (provider === 'custom') {
+      defaultApiUrl = 'https://api.groq.com/openai/v1';
+      defaultModel = 'llama-3.1-8b-instant';
     } else if (provider === 'ollama') {
       defaultApiUrl = 'http://localhost:11434/v1';
       defaultModel = 'qwen3:4b';
@@ -139,8 +189,16 @@ function updateApiProviderUI(provider) {
     
     if (apiKeyGroup) apiKeyGroup.style.display = 'flex';
     labelApiKey.textContent = 'Mistral API Key';
-    hintApiKey.textContent = 'Get a free API key from console.mistral.ai';
-    inputApiKey.placeholder = 'Enter your Mistral API key';
+    hintApiKey.textContent = 'Add multiple keys (1 per line) to auto-switch on token limits';
+    inputApiKey.placeholder = 'Enter Mistral API key(s) (1 per line for backup keys)';
+    updateKeysBadge();
+
+    if (linkGetApiKey) {
+      linkGetApiKey.href = 'https://console.mistral.ai/api-keys/';
+      const textSpan = linkGetApiKey.querySelector('span');
+      if (textSpan) textSpan.textContent = 'Get Free Mistral API Key';
+      linkGetApiKey.style.display = 'inline-flex';
+    }
     
     // Prefill Mistral endpoint & model if switching from another provider's defaults
     if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1')) {
@@ -159,6 +217,8 @@ function updateApiProviderUI(provider) {
     
     // Hide API key since Ollama runs locally without keys
     if (apiKeyGroup) apiKeyGroup.style.display = 'none';
+    if (badgeKeysCount) badgeKeysCount.style.display = 'none';
+    if (linkGetApiKey) linkGetApiKey.style.display = 'none';
     
     // Prefill default Ollama details if empty
     if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('api.openai.com') || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('mistral.ai')) {
@@ -177,8 +237,16 @@ function updateApiProviderUI(provider) {
     
     if (apiKeyGroup) apiKeyGroup.style.display = 'flex';
     labelApiKey.textContent = 'API Key / Token';
-    hintApiKey.textContent = 'Enter the authorization token (if required by custom host)';
-    inputApiKey.placeholder = 'Enter API key';
+    hintApiKey.textContent = 'Add multiple keys (1 per line) to auto-switch on rate limits';
+    inputApiKey.placeholder = 'Enter custom/Groq API key(s)';
+    updateKeysBadge();
+
+    if (linkGetApiKey) {
+      linkGetApiKey.href = 'https://console.groq.com/keys';
+      const textSpan = linkGetApiKey.querySelector('span');
+      if (textSpan) textSpan.textContent = 'Get Free Groq API Key';
+      linkGetApiKey.style.display = 'inline-flex';
+    }
     
     // Prefill default Custom/Groq details if empty or set to local Ollama / Mistral
     if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1') || inputApiUrl.value.includes('mistral.ai')) {
@@ -197,8 +265,16 @@ function updateApiProviderUI(provider) {
     
     if (apiKeyGroup) apiKeyGroup.style.display = 'flex';
     labelApiKey.textContent = 'Gemini API Key';
-    hintApiKey.textContent = 'Get a free key from Google AI Studio';
-    inputApiKey.placeholder = 'Enter your Gemini API key';
+    hintApiKey.textContent = 'Add multiple keys (1 per line) to auto-switch on quota limits';
+    inputApiKey.placeholder = 'Enter Gemini API key(s)';
+    updateKeysBadge();
+
+    if (linkGetApiKey) {
+      linkGetApiKey.href = 'https://aistudio.google.com/app/apikey';
+      const textSpan = linkGetApiKey.querySelector('span');
+      if (textSpan) textSpan.textContent = 'Get Free Gemini API Key';
+      linkGetApiKey.style.display = 'inline-flex';
+    }
   }
 }
 
@@ -292,9 +368,10 @@ async function handleFillProfile() {
 async function handleSolveQuestions() {
   // Check if API Key is configured for Gemini or Mistral
   const settings = await chrome.storage.local.get(['api_key', 'api_provider', 'api_url']);
-  const provider = settings.api_provider || 'custom';
+  const provider = settings.api_provider || 'mistral';
+  const keys = parseApiKeys(settings.api_key);
   
-  if ((provider === 'gemini' || provider === 'mistral') && !settings.api_key) {
+  if ((provider === 'gemini' || provider === 'mistral') && keys.length === 0) {
     showStatus('API Key Required', 'error');
     updateFooterMessage(`Please enter your ${provider === 'mistral' ? 'Mistral' : 'Gemini'} API Key in AI Settings.`);
     // Switch to Settings tab
@@ -349,9 +426,9 @@ async function sendMessageToActiveTab(message) {
     }
     
     // Check for restricted URLs
-    if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('https://chromewebstore.google.com') || tab.url.startsWith('about:')) {
+    if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('https://chromewebstore.google.com') || tab.url.startsWith('https://microsoftedge.microsoft.com') || tab.url.startsWith('about:')) {
       showStatus('Protected Page', 'error');
-      updateFooterMessage('Chrome extensions cannot run on browser system pages.');
+      updateFooterMessage('Extensions cannot run on internal browser system pages.');
       return null;
     }
 
@@ -442,10 +519,13 @@ function debounce(func, wait) {
   };
 }
 
-// Listen for progress updates from content.js
+// Listen for progress updates from content.js or background.js
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'solve_progress') {
     showStatus(message.statusText || 'Solving...', 'loading');
     updateFooterMessage(message.detailText || 'Analyzing form...');
+    if (message.activeKeyIndex !== undefined) {
+      updateKeysBadge(message.activeKeyIndex);
+    }
   }
 });
