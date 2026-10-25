@@ -184,6 +184,10 @@ Be highly accurate, select the most academically correct option, and write preci
 // Toggle UI display depending on Provider (Mistral vs Apple vs Gemini vs Ollama vs Custom)
 function updateApiProviderUI(provider) {
   const apiKeyGroup = labelApiKey.closest('.form-group');
+  const bannerAppleAi = document.getElementById('banner-apple-ai');
+  if (bannerAppleAi) {
+    bannerAppleAi.style.display = (provider === 'apple') ? 'flex' : 'none';
+  }
   
   if (provider === 'mistral') {
     containerApiUrl.style.display = 'block';
