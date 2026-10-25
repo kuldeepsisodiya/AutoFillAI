@@ -17,13 +17,14 @@ AutoFillAI ("the Extension") is committed to respecting and protecting your priv
 
 ---
 
-### 2. Third-Party AI Services
-AutoFillAI allows users to connect directly to third-party AI providers using their own API keys:
+### 2. Third-Party & Local AI Services
+AutoFillAI allows users to connect directly to cloud or local AI providers:
 - **Mistral AI:** Interacts directly with `https://api.mistral.ai/v1`. Subject to [Mistral AI's Privacy Policy](https://mistral.ai/terms/#privacy-policy).
 - **Google Gemini API:** Interacts directly with `https://generativelanguage.googleapis.com/`. Subject to [Google Privacy Policy](https://policies.google.com/privacy).
-- **Groq / Custom Endpoints / Local Ollama:** Interacts directly with the user-configured API URL or local offline host (`localhost:11434`).
+- **Apple Foundation Models (macOS Local):** Interacts strictly on-device with the local Apple Foundation Models service (`http://127.0.0.1:1976`) spawned by `fm serve`. No data leaves your Mac, and no external network transmission occurs.
+- **Local Ollama / Custom Endpoints:** Interacts directly with the user-configured API URL or local offline host (e.g. `localhost:11434` or `127.0.0.1`).
 
-Your API keys and form questions are transmitted solely between your browser and the respective AI service endpoint over encrypted HTTPS.
+Your API keys and form questions are transmitted solely between your browser and the respective AI service endpoint over encrypted HTTPS (or private local loopback for Apple FM and Ollama).
 
 ---
 
@@ -32,7 +33,8 @@ AutoFillAI requests only the minimum permissions necessary to function:
 - **`storage`:** To locally store user profile details and extension preferences on the user's machine.
 - **`activeTab` & `scripting`:** To read questions from and input answers into the webpage the user is actively viewing when the user clicks an action button.
 - **`webNavigation`:** To detect and autofill form fields embedded inside nested iframes (such as embedded Google Forms).
-- **Host Permissions:** To communicate directly with the AI endpoints (`api.mistral.ai`, `generativelanguage.googleapis.com`, etc.) and inject solver scripts into web forms.
+- **`declarativeNetRequest`:** Required solely to modify the `Origin` HTTP request header for loopback addresses (`127.0.0.1` and `localhost`). This allows the extension to communicate with local on-device servers such as macOS Apple Intelligence (`fm serve`) and local Ollama without being blocked by local cross-site request forgery (CSRF) protections. It does not monitor, intercept, or modify web traffic on any public websites.
+- **Host Permissions:** To communicate directly with the AI endpoints (`api.mistral.ai`, `generativelanguage.googleapis.com`, local endpoints, etc.) and inject solver scripts into web forms.
 
 ---
 

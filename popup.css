@@ -587,3 +587,42 @@ textarea#input-api-key {
   color: var(--accent-cyan);
   text-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
 }
+
+/* Local AI Banner (Apple Intelligence & Ollama) */
+.local-ai-banner {
+  background: rgba(139, 92, 246, 0.09);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.local-ai-banner .banner-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c084fc;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.local-ai-banner p {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.local-ai-banner code {
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--accent-cyan);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
