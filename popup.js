@@ -150,7 +150,10 @@ async function loadSettings() {
 
     let defaultApiUrl = 'https://api.mistral.ai/v1';
     let defaultModel = 'ministral-3b-2512';
-    if (provider === 'custom') {
+    if (provider === 'apple') {
+      defaultApiUrl = 'http://127.0.0.1:1976/v1';
+      defaultModel = 'system';
+    } else if (provider === 'custom') {
       defaultApiUrl = 'https://api.groq.com/openai/v1';
       defaultModel = 'llama-3.1-8b-instant';
     } else if (provider === 'ollama') {
@@ -178,7 +181,7 @@ Be highly accurate, select the most academically correct option, and write preci
   }
 }
 
-// Toggle UI display depending on Provider (Mistral vs Gemini vs Ollama vs Custom)
+// Toggle UI display depending on Provider (Mistral vs Apple vs Gemini vs Ollama vs Custom)
 function updateApiProviderUI(provider) {
   const apiKeyGroup = labelApiKey.closest('.form-group');
   
@@ -204,12 +207,32 @@ function updateApiProviderUI(provider) {
     if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1')) {
       inputApiUrl.value = 'https://api.mistral.ai/v1';
     }
-    if (!inputModel.value.trim() || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3') {
+    if (!inputModel.value.trim() || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3' || inputModel.value === 'system' || inputModel.value === 'pcc') {
       inputModel.value = 'ministral-3b-2512';
     }
     
     containerApiUrl.querySelector('.field-hint').textContent = 'Mistral base endpoint URL (https://api.mistral.ai/v1)';
     containerInputModel.querySelector('.field-hint').textContent = 'Specify Mistral model ID (e.g. ministral-3b-2512, mistral-small-latest)';
+  } else if (provider === 'apple') {
+    containerApiUrl.style.display = 'block';
+    containerInputModel.style.display = 'block';
+    containerSelectModel.style.display = 'none';
+
+    // Apple Foundation Models runs locally on macOS via 'fm serve' without API keys
+    if (apiKeyGroup) apiKeyGroup.style.display = 'none';
+    if (badgeKeysCount) badgeKeysCount.style.display = 'none';
+    if (linkGetApiKey) linkGetApiKey.style.display = 'none';
+
+    // Prefill default Apple FM details
+    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('mistral.ai') || inputApiUrl.value.includes('localhost:11434')) {
+      inputApiUrl.value = 'http://127.0.0.1:1976/v1';
+    }
+    if (!inputModel.value.trim() || inputModel.value === 'ministral-3b-2512' || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'qwen3:4b') {
+      inputModel.value = 'system';
+    }
+
+    containerApiUrl.querySelector('.field-hint').textContent = 'Apple fm serve endpoint (e.g. http://127.0.0.1:1976/v1)';
+    containerInputModel.querySelector('.field-hint').textContent = 'Apple FM model identifier (default: system, or pcc)';
   } else if (provider === 'ollama') {
     containerApiUrl.style.display = 'block';
     containerInputModel.style.display = 'block';
@@ -221,10 +244,10 @@ function updateApiProviderUI(provider) {
     if (linkGetApiKey) linkGetApiKey.style.display = 'none';
     
     // Prefill default Ollama details if empty
-    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('api.openai.com') || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('mistral.ai')) {
+    if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('api.openai.com') || inputApiUrl.value.includes('groq.com') || inputApiUrl.value.includes('mistral.ai') || inputApiUrl.value.includes('127.0.0.1:1976')) {
       inputApiUrl.value = 'http://localhost:11434/v1';
     }
-    if (!inputModel.value.trim() || inputModel.value.includes('gemini') || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'ministral-3b-2512') {
+    if (!inputModel.value.trim() || inputModel.value.includes('gemini') || inputModel.value === 'llama-3.1-8b-instant' || inputModel.value === 'ministral-3b-2512' || inputModel.value === 'system' || inputModel.value === 'pcc') {
       inputModel.value = 'qwen3:4b';
     }
     
@@ -238,7 +261,7 @@ function updateApiProviderUI(provider) {
     if (apiKeyGroup) apiKeyGroup.style.display = 'flex';
     labelApiKey.textContent = 'API Key / Token';
     hintApiKey.textContent = 'Add multiple keys (1 per line) to auto-switch on rate limits';
-    inputApiKey.placeholder = 'Enter custom/Groq API key(s)';
+    inputApiKey.placeholder = 'Enter custom/Groq API key(s) (Leave blank if not required)';
     updateKeysBadge();
 
     if (linkGetApiKey) {
@@ -252,11 +275,11 @@ function updateApiProviderUI(provider) {
     if (!inputApiUrl.value.trim() || inputApiUrl.value.includes('localhost') || inputApiUrl.value.includes('127.0.0.1') || inputApiUrl.value.includes('mistral.ai')) {
       inputApiUrl.value = 'https://api.groq.com/openai/v1';
     }
-    if (!inputModel.value.trim() || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3' || inputModel.value === 'ministral-3b-2512') {
+    if (!inputModel.value.trim() || inputModel.value === 'qwen3:4b' || inputModel.value === 'llama3' || inputModel.value === 'ministral-3b-2512' || inputModel.value === 'system' || inputModel.value === 'pcc') {
       inputModel.value = 'llama-3.1-8b-instant';
     }
     
-    containerApiUrl.querySelector('.field-hint').textContent = 'The base endpoint URL (e.g. https://api.groq.com/openai/v1)';
+    containerApiUrl.querySelector('.field-hint').textContent = 'The base endpoint URL (e.g. https://api.groq.com/openai/v1 or http://127.0.0.1:1976)';
     containerInputModel.querySelector('.field-hint').textContent = 'Specify the exact model ID for the custom provider';
   } else {
     containerApiUrl.style.display = 'none';

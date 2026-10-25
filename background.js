@@ -1,3 +1,88 @@
+// Ensure local Origin header rewrite rules are active to prevent CSRF 403 on local AI engines (Apple fm serve, Ollama, etc.)
+async function setupLocalOriginRules() {
+  if (!chrome.declarativeNetRequest) return;
+  try {
+    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const existingIds = existingRules.map(r => r.id);
+    
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: existingIds,
+      addRules: [
+        {
+          id: 101,
+          priority: 5,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [
+              { header: 'Origin', operation: 'set', value: 'http://127.0.0.1:1976' }
+            ]
+          },
+          condition: {
+            urlFilter: '|http://127.0.0.1:1976*',
+            resourceTypes: ['xmlhttprequest']
+          }
+        },
+        {
+          id: 102,
+          priority: 5,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [
+              { header: 'Origin', operation: 'set', value: 'http://localhost:1976' }
+            ]
+          },
+          condition: {
+            urlFilter: '|http://localhost:1976*',
+            resourceTypes: ['xmlhttprequest']
+          }
+        },
+        {
+          id: 103,
+          priority: 2,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [
+              { header: 'Origin', operation: 'remove' }
+            ]
+          },
+          condition: {
+            urlFilter: '|http://127.0.0.1*',
+            resourceTypes: ['xmlhttprequest']
+          }
+        },
+        {
+          id: 104,
+          priority: 2,
+          action: {
+            type: 'modifyHeaders',
+            requestHeaders: [
+              { header: 'Origin', operation: 'remove' }
+            ]
+          },
+          condition: {
+            urlFilter: '|http://localhost*',
+            resourceTypes: ['xmlhttprequest']
+          }
+        }
+      ]
+    });
+    console.log('AutoFillAI: declarativeNetRequest localhost rules configured.');
+  } catch (err) {
+    console.warn('AutoFillAI: declarativeNetRequest rule update note:', err);
+  }
+}
+
+// Register rules on install, startup, and background activation
+chrome.runtime.onInstalled.addListener(() => {
+  setupLocalOriginRules();
+});
+if (chrome.runtime.onStartup) {
+  chrome.runtime.onStartup.addListener(() => {
+    setupLocalOriginRules();
+  });
+}
+setupLocalOriginRules();
+
 // Listen for messages from content scripts or popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'call_gemini_api') {
@@ -57,15 +142,15 @@ async function handleGeminiCall({ questions, model, instructions, profile }) {
   ]);
   const apiProvider = storage.api_provider || 'mistral';
   const apiKeys = parseApiKeys(storage.api_key);
-  const apiBaseUrl = storage.api_url || (apiProvider === 'mistral' ? 'https://api.mistral.ai/v1' : '');
+  const apiBaseUrl = storage.api_url || (apiProvider === 'mistral' ? 'https://api.mistral.ai/v1' : (apiProvider === 'apple' ? 'http://127.0.0.1:1976/v1' : (apiProvider === 'ollama' ? 'http://localhost:11434/v1' : '')));
 
   // Check API Key
-  const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral';
+  const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral' || apiProvider === 'apple';
   if ((apiProvider === 'gemini' || apiProvider === 'mistral') && apiKeys.length === 0) {
     throw new Error(`${apiProvider === 'mistral' ? 'Mistral' : 'Gemini'} API Key is missing. Please set it in the extension popup settings.`);
   }
 
-  // Key pool for rotation (for Ollama, a blank key is sufficient)
+  // Key pool for rotation (for Ollama or Apple FM, a blank key is sufficient)
   const keyPool = apiKeys.length > 0 ? apiKeys : [''];
   let currentKeyIndex = (storage.active_key_index || 0) % keyPool.length;
 
@@ -85,6 +170,7 @@ Here are the user's profile details. Use them if any question asks for their nam
 
   let fallbackModel = 'ministral-3b-2512';
   if (apiProvider === 'mistral') fallbackModel = 'ministral-3b-2512';
+  else if (apiProvider === 'apple') fallbackModel = 'system';
   else if (apiProvider === 'gemini') fallbackModel = 'gemini-2.5-flash';
   else if (apiProvider === 'ollama') fallbackModel = 'qwen3:4b';
   else if (apiProvider === 'custom') fallbackModel = 'llama-3.1-8b-instant';
@@ -203,18 +289,30 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
     'Content-Type': 'application/json'
   };
 
-  const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral';
+  const isOpenAICompatible = apiProvider === 'custom' || apiProvider === 'ollama' || apiProvider === 'mistral' || apiProvider === 'apple';
 
   if (isOpenAICompatible) {
-    let endpointBase = apiBaseUrl;
+    let endpointBase = (apiBaseUrl || '').trim();
     if (apiProvider === 'mistral' && !endpointBase) {
       endpointBase = 'https://api.mistral.ai/v1';
+    } else if (apiProvider === 'apple' && !endpointBase) {
+      endpointBase = 'http://127.0.0.1:1976/v1';
+    } else if (apiProvider === 'ollama' && !endpointBase) {
+      endpointBase = 'http://localhost:11434/v1';
     }
+
     if (!endpointBase) {
       throw new Error('API Base URL is missing. Please set it in the extension settings.');
     }
     
-    url = `${endpointBase.replace(/\/$/, '')}/chat/completions`;
+    let cleanBase = endpointBase.replace(/\/+$/, '');
+    if (cleanBase.endsWith('/chat/completions')) {
+      url = cleanBase;
+    } else if (cleanBase.endsWith('/v1')) {
+      url = `${cleanBase}/chat/completions`;
+    } else {
+      url = `${cleanBase}/v1/chat/completions`;
+    }
     
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
@@ -222,6 +320,7 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
     
     payload = {
       model: targetModel,
+      stream: false,
       messages: [
         {
           role: "system",
@@ -284,6 +383,35 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
     };
   }
 
+  // If target URL is on 127.0.0.1 or localhost, ensure exact matching Origin rule is active
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === 'localhost') {
+      const targetOrigin = `${parsedUrl.protocol}//${parsedUrl.host}`;
+      if (chrome.declarativeNetRequest && chrome.declarativeNetRequest.updateDynamicRules) {
+        await chrome.declarativeNetRequest.updateDynamicRules({
+          removeRuleIds: [200],
+          addRules: [
+            {
+              id: 200,
+              priority: 10,
+              action: {
+                type: 'modifyHeaders',
+                requestHeaders: [
+                  { header: 'Origin', operation: 'set', value: targetOrigin }
+                ]
+              },
+              condition: {
+                urlFilter: `|${targetOrigin}*`,
+                resourceTypes: ['xmlhttprequest']
+              }
+            }
+          ]
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+
   const response = await fetch(url, {
     method: 'POST',
     headers: headers,
@@ -309,7 +437,7 @@ Provide the correct answers matching the JSON schema. Remember, for index-based 
     if (isOpenAICompatible) {
       responseText = result.choices?.[0]?.message?.content;
       if (!responseText) {
-        throw new Error(`${apiProvider === 'mistral' ? 'Mistral' : 'Custom'} API returned an empty response.`);
+        throw new Error(`${apiProvider === 'mistral' ? 'Mistral' : (apiProvider === 'apple' ? 'Apple FM' : 'Custom')} API returned an empty response.`);
       }
     } else {
       const candidate = result.candidates?.[0];

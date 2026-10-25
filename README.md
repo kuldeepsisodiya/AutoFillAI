@@ -53,6 +53,7 @@ Save your Full Name, Enrollment/Roll Number, and custom profile fields (Class, D
 ### 🌐 6. Multi-Provider Flexibility
 Choose the AI engine that fits your workflow:
 - **Mistral AI (Free Tier)**: Fast, accurate reasoning (`ministral-3b-2512`).
+- **Apple Foundation Models (Local macOS)**: Built-in Apple Intelligence via `fm serve` on `http://127.0.0.1:1976` (`system` model) with zero API keys, on-device execution, and built-in CSRF origin bypass.
 - **Groq Llama-3.1 (High-Speed Free Tier)**: Blazing fast response times (`llama-3.1-8b-instant`).
 - **Google Gemini API**: Direct connection via Gemini 2.5 Flash / Pro.
 - **Local Ollama (100% Free & Offline)**: Connects to `http://localhost:11434/v1` for completely offline, private solving with zero internet required.
